@@ -14,17 +14,38 @@ class SuffixNode:
         self.start = start
         self.end = end
         self.edges = dict()
+
+
 class SuffixTree:
     def __init__(self):
-        self.root = dict()
+        self._root = SuffixNode(None, None)
         self._insertion_string = None
+
+        self._active_node = None
+        self._active_edge = None
+        self._active_length = None
 
     def insert(self, string):
         assert isinstance(string, str)
-        self._insertion_string = string
+        active_node = self._root
+        active_edge = ""
+        active_length = 0
+        remainder = 1
 
         for idx, char in enumerate(string):
-            self.root[char] = SuffixNode(idx, None)
+            if active_edge:
+                node = active_node.edges[active_edge]
+                if string[node.start + active_length] == char:
+                    active_length += 1
+                    remainder += 1
+            elif char in active_node.edges:
+                active_edge += char
+                active_length = 1
+                remainder += 1
+            else:
+                active_node.edges[char] = SuffixNode(idx, None)
+
+        pass  # Breakpoint
 
     def _edge_of(self, start, end):
         return start, end
@@ -32,5 +53,4 @@ class SuffixTree:
 
 if __name__ == "__main__":
     st = SuffixTree()
-    st.insert("abc")
-    pass
+    st.insert("abcab")
