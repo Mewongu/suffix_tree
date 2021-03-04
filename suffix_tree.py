@@ -161,6 +161,38 @@ class SuffixTree:
         result += "}"
         file.write_text(result)
 
+    def traverse(self, string) -> Union[Active, None]:
+        active = Active(self.root, "", 0)
+        active.node = self.root
+        active.length = 0
+        active.edge = ""
+
+        for c in string:
+            if active.edge:
+                if (
+                    c
+                    != self.total_string[
+                        active.node.nodes[active.edge].start + active.length
+                    ]
+                ):
+                    return None
+                active.length += 1
+
+            else:
+                active.edge = c
+                active.length = 1
+                if active.edge not in active.node.nodes:
+                    return None
+            edge_node = active.node.nodes[active.edge]
+            if edge_node.end == edge_node.start + active.length:
+                active.node = edge_node
+                active.edge = ""
+        return active
+
+    def __contains__(self, string: str) -> bool:
+        return self.traverse(string) is not None
+
+
 
 if __name__ == "__main__":
     start = time.time()
@@ -173,5 +205,6 @@ if __name__ == "__main__":
     ):
         st.insert_string(s)
     st.to_dot(Path(f"tmp.dot"))
+    "anan" in st
     end = time.time()
     print(end - start)
