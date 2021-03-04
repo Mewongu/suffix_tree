@@ -2,6 +2,8 @@
 Based on https://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algorithm-in-plain-english
 """
 from __future__ import annotations
+
+from pathlib import Path
 from typing import Union, Dict
 
 
@@ -100,8 +102,29 @@ class SuffixTree:
             result.extend(_to_string_helper(node, prefixes=["┣"]))
         return "\n".join(result)
 
+    def to_dot(self, file: Path):
+        nodes_to_visit = []
+        current_node = self._root
+        result = "digraph { rankdir=LR;"
+        while current_node:
+            result += f'{hash(current_node)} [label=""]'
+            nodes_to_visit.extend(list(current_node.edges.values()))
+            for node in current_node.edges.values():
+                result += f'{hash(current_node)} -> {hash(node)} [label="{self.string[node.start:node.end or None]}"];'
+            if current_node.suffix_link:
+                result += f'{hash(current_node)} -> {hash(current_node.suffix_link)} [label="", style="dashed"];'
+
+            if nodes_to_visit:
+                current_node = nodes_to_visit.pop()
+            else:
+                current_node = None
+        result += "}"
+        file.write_text(result)
+
 
 if __name__ == "__main__":
     st = SuffixTree()
-    st.insert("abcabxabcd")
+    s = "abcabxabcd"
+    st.insert(s)
     print(st.to_string())
+    st.to_dot(Path(f"{s}.dot"))
