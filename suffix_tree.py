@@ -4,33 +4,20 @@ Based on https://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algori
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union, Dict, Iterable
+from typing import Union, Dict, Generator
 
 
 class SuffixNode:
+    nodes: Dict[str, SuffixNode]
     start: int
     end: Union[int, None]
-    _edges: Dict[str, SuffixNode]
-    suffix_link: Union[None, SuffixNode]
+    suffix_link: Union[SuffixNode, None]
 
     def __init__(self, start, end):
         self.start = start
         self.end = end
-        self._edges = dict()
+        self.nodes = dict()
         self.suffix_link = None
-
-    def __setitem__(self, key, value):
-        self._edges[key] = value
-
-    def __getitem__(self, key):
-        return self._edges[key]
-
-    def __contains__(self, key):
-        return key in self._edges
-
-    @property
-    def edges(self) -> Iterable[SuffixNode]:
-        return self._edges.values()
 
 
 class Active:
@@ -45,97 +32,90 @@ class Active:
 
 
 class SuffixTree:
-    def __init__(self, string: str):
-        self._root = SuffixNode(None, None)
+    root: SuffixNode
+    string: str
+
+    def __init__(self):
+        self.string = None
+        self.root = SuffixNode(None, None)
+
+    def insert_string(self, string: str):
         self.string = string
-        act = Active(self._root, "", 0)
-        remainder = 1
-
-        for idx, char in enumerate(string):
+        remainder = 0
+        active = Active(self.root, "", 0)
+        for idx, chr in enumerate(string):
+            remainder += 1
             to_link = None
-            if act.edge:
-                node = act.node[act.edge]
-                if string[node.start + act.length] == char:
-                    act.length += 1
-                    remainder += 1
+            while remainder:
+                if active.length == 0:
+                    active.edge = chr
+                if active.edge not in active.node.nodes:
+                    active.node.nodes[active.edge] = SuffixNode(start=idx, end=None)
 
-                    if node.start + act.length == node.end:
-                        act.node = node
-                        act.edge = ""
-                        act.length = 0
+                    # Rule 2
+                    if to_link:
+                        to_link.suffix_link = active.node
+                    to_link = active.node
+
                 else:
-                    while act.edge in act.node:
-                        node = act.node[act.edge]
-                        split_node = SuffixNode(node.start + act.length, None)
+                    next = active.node.nodes[active.edge]
+                    edge_length = (next.end or idx + 1) - next.start
+                    if active.length >= edge_length:
+                        active.edge = string[next.start + edge_length]
+                        active.length -= edge_length
+                        active.node = next
+                        continue
+                    if string[next.start + active.length] == chr:
+                        active.length += 1
 
-                        # Check Rule 2
+                        # Rule 2
                         if to_link:
-                            to_link.suffix_link = node
+                            to_link.suffix_link = active.node
+                        break
 
-                        node.end = node.start + act.length
-                        node[string[node.start + act.length]] = split_node
-                        node[char] = SuffixNode(idx, None)
-                        remainder -= 1
+                    split_node = SuffixNode(next.start, next.start + active.length)
+                    active.node.nodes[active.edge] = split_node
+                    new_node = SuffixNode(idx, None)
+                    split_node.nodes[chr] = new_node
+                    next.start += active.length
+                    split_node.nodes[string[next.start]] = next
 
-                        # Check Rule 1
-                        if act.node == self._root:
-                            if act.length:
-                                act.length -= 1
-                                act.edge = string[idx - act.length]
-                        else:
-                            # Rule 3
-                            act.node = (
-                                act.node.suffix_link
-                                if act.node.suffix_link
-                                else self._root
-                            )
-                        to_link = node
-                    act.node[act.edge] = SuffixNode(idx, None)
-                    act.edge = ""
+                    # Rule 2
+                    if to_link:
+                        to_link.suffix_link = split_node
+                    to_link = split_node
 
-            elif char in act.node:
-                act.edge += char
-                act.length = 1
-                remainder += 1
-            else:
-                act.node[char] = SuffixNode(idx, None)
+                remainder -= 1
 
-    def to_string(self):
-        def _to_string_helper(node, prefixes=None):
-            result = ["".join(prefixes + [self.string[node.start : node.end]])]
-            for node in node.edges:
-                result.extend(
-                    _to_string_helper(node, prefixes=prefixes[:-1] + ["┃", "┣"])
-                )
-            return result
+                # Rule 1
+                if active.node == self.root and active.length > 0:
+                    active.edge = string[idx - remainder + 1]
+                    active.length -= 1
+                else:
+                    active.node = active.node.suffix_link or self.root
 
-        result = ["@"]
-        for node in self._root.edges:
-            result.extend(_to_string_helper(node, prefixes=["┣"]))
-        return "\n".join(result)
+    @property
+    def nodes(self) -> Generator[SuffixNode, None, None]:
+        to_visit = [self.root]
+        while to_visit:
+            node = to_visit.pop()
+            yield node
+            to_visit.extend(list(node.nodes.values()))
 
     def to_dot(self, file: Path):
-        nodes_to_visit = []
-        current_node = self._root
         result = "digraph { rankdir=LR;"
-        while current_node:
-            result += f'{hash(current_node)} [label=""]'
-            nodes_to_visit.extend(list(current_node.edges))
-            for node in current_node.edges:
-                result += f'{hash(current_node)} -> {hash(node)} [label="{self.string[node.start:node.end or None]}"];'
-            if current_node.suffix_link:
-                result += f'{hash(current_node)} -> {hash(current_node.suffix_link)} [label="", style="dashed"];'
-
-            if nodes_to_visit:
-                current_node = nodes_to_visit.pop()
-            else:
-                current_node = None
+        for node in self.nodes:
+            result += f'{hash(node)} [label="", shape=circle, height=.1, width=.1];'
+            for n in node.nodes.values():
+                result += f'{hash(node)} -> {hash(n)} [label="{self.string[n.start:n.end or None]}"];'
+            if node.suffix_link:
+                result += f'{hash(node)} -> {hash(node.suffix_link)} [label="", style="dashed"];'
         result += "}"
         file.write_text(result)
 
 
 if __name__ == "__main__":
-    s = "abcabxabcd"
-    st = SuffixTree(s)
-    print(st.to_string())
-    st.to_dot(Path(f"{s}.dot"))
+    s = "banana and ananas#"
+    st = SuffixTree()
+    st.insert_string(s)
+    st.to_dot(Path(f"tmp.dot"))
