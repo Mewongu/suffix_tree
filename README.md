@@ -6,7 +6,7 @@
     1)[x] contains
     2)[x] number of occurrances
     3)[ ] first occurrance
-    4)[ ] all occurrances
+    4)[x] all occurrances
     5)[ ] sectioning
     6)[ ] longest common substring
     7)[ ] longest repeating substring

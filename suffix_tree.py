@@ -3,10 +3,11 @@ Based on https://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algori
 """
 from __future__ import annotations
 
-import time
 from pathlib import Path
 from random import randint
-from typing import Union, Dict, Generator
+from typing import Union, Dict, Generator, Tuple
+
+StringId = int
 
 
 class SuffixNode:
@@ -34,16 +35,22 @@ class Active:
 
 
 class SuffixString:
+    id: StringId
     string: str
     start_index: int
     end_index: int
     termination_char: str
 
-    def __init__(self, string, start, end, termination_char):
+    def __init__(self, id, string, start, end, termination_char):
+        self.id = id
         self.string = string
         self.start = start
         self.end = end
         self.termination_char = termination_char
+
+    @property
+    def length(self):
+        return self.end - self.start - 1
 
 
 class SuffixTree:
@@ -52,7 +59,7 @@ class SuffixTree:
 
     def __init__(self):
         self.total_string = ""
-        self.strings = list()
+        self.strings = dict()
 
         self.root = SuffixNode(None, None)
         self.active = Active(self.root, "", 0)
@@ -72,14 +79,14 @@ class SuffixTree:
     def insert_string(self, string: str):
         termination_char = self._select_termination_character(string)
         string += termination_char
-        self.strings.append(
-            SuffixString(
-                string,
-                len(self.total_string),
-                len(self.total_string) + len(string),
-                termination_char=termination_char,
-            )
+        suffix_string = SuffixString(
+            len(self.strings) + 0xBEEF,
+            string,
+            len(self.total_string),
+            len(self.total_string) + len(string),
+            termination_char=termination_char,
         )
+        self.strings[suffix_string.id] = suffix_string
         for local_idx, chr in enumerate(string):
             self.total_string += chr
             self.global_idx += 1
@@ -134,6 +141,7 @@ class SuffixTree:
                     self.active.length -= 1
                 else:
                     self.active.node = self.active.node.suffix_link or self.root
+        return suffix_string.id
 
     @property
     def nodes(self) -> Generator[SuffixNode, None, None]:
@@ -143,14 +151,41 @@ class SuffixTree:
             yield node
             to_visit.extend(list(node.nodes.values()))
 
+    def get_string(self, string_id):
+        return self.strings[string_id]
+
     def _get_string_for_index(self, index: int) -> SuffixString:
-        return min([s for s in self.strings if s.end > index], key=lambda x: x.end)
+        return min(
+            [s for s in self.strings.values() if s.end > index], key=lambda x: x.end
+        )
 
     def _get_end(self, node: SuffixNode):
         if not node.end:
             suffix_string = self._get_string_for_index(node.start)
             return suffix_string.end - 1
         return node.end
+
+    def find_all(self, string: str) -> Generator[Tuple[StringId, int], None, None]:
+        active = self.traverse(string)
+        if not active:
+            return None
+        node = active.node
+        if active.edge:
+            node = node.nodes[active.edge]
+        distance = self.get_edge_length(node) - active.length
+
+        to_visit = [(distance, node)]
+        while to_visit:
+            distance, node = to_visit.pop()
+            if node.end is None:
+                suffix_string = self._get_string_for_index(node.start)
+                yield suffix_string.id, suffix_string.length - distance - 1
+            to_visit.extend(
+                [(distance + self.get_edge_length(n), n) for n in node.nodes.values()]
+            )
+
+    def get_edge_length(self, node):
+        return self._get_end(node) - node.start
 
     def to_dot(self, file: Path, include_suffix_links=True):
         result = "digraph { rankdir=LR;"
@@ -213,16 +248,18 @@ class SuffixTree:
 
 
 if __name__ == "__main__":
+    import pprint
+    import time
+
     start = time.time()
     st = SuffixTree()
     for s in (
         "banan",
         "ananas",
-        "bananas",
-        "annas",
+        "aabbcc",
     ):
         st.insert_string(s)
     st.to_dot(Path(f"tmp.dot"))
-    "anan" in st
+    pprint.pprint(sorted(st.find_all("a")))
     end = time.time()
     print(end - start)
