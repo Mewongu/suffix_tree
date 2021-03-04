@@ -17,6 +17,25 @@ def text_and_search_term(draw):
     return text[:insertion_point] + search_term + text[insertion_point:], search_term
 
 
+@composite
+def text_search_term_insertion_count(draw):
+    text = draw(st.text(min_size=0, max_size=1000, alphabet=string.ascii_lowercase))
+    search_term = draw(
+        st.text(min_size=1, max_size=1000, alphabet=string.ascii_uppercase)
+    )
+    insertions = draw(st.integers(min_value=0, max_value=len(text)))
+    result_text = ""
+
+    prev_pos = 0
+    insertion_points = set([insertions for _ in range(insertions)])
+    for pos in sorted(insertion_points):
+        result_text += text[prev_pos:pos] + search_term
+        prev_pos = pos
+    result_text += text[prev_pos:]
+
+    return result_text, search_term, len(insertion_points)
+
+
 def suffixes(search_term):
     for x in range(len(search_term) - 1):
         yield search_term[x:]
@@ -66,3 +85,11 @@ def test_contains_not(text, search_term):
     st = SuffixTree()
     st.insert_string(text)
     assert search_term not in st
+
+
+@given(text_search_term_insertion_count())
+def test_occurrances(text_search_term_insertion_count):
+    text, search_term, insertion_count = text_search_term_insertion_count
+    st = SuffixTree()
+    st.insert_string(text)
+    assert st.occurrances(search_term) == insertion_count

@@ -192,6 +192,22 @@ class SuffixTree:
     def __contains__(self, string: str) -> bool:
         return self.traverse(string) is not None
 
+    def occurrances(self, string: str) -> int:
+        active = self.traverse(string)
+        if not active:
+            return 0
+        node = active.node
+        if active.edge:
+            node = node.nodes[active.edge]
+        count = 0
+
+        to_visit = [node]
+        while to_visit:
+            node = to_visit.pop()
+            if node.end is None:
+                count += 1
+            to_visit.extend(node.nodes.values())
+        return count
 
 
 if __name__ == "__main__":
