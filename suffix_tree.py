@@ -32,12 +32,10 @@ class SuffixNode:
     def edges(self) -> Iterable[SuffixNode]:
         return self._edges.values()
 
-class SuffixTree:
-    def __init__(self):
-        self._root = SuffixNode(None, None)
-        self.string = None
 
-    def insert(self, string: str):
+class SuffixTree:
+    def __init__(self, string: str):
+        self._root = SuffixNode(None, None)
         self.string = string
         active_node = self._root
         active_edge = ""
@@ -128,8 +126,7 @@ class SuffixTree:
 
 
 if __name__ == "__main__":
-    st = SuffixTree()
     s = "abcabxabcd"
-    st.insert(s)
+    st = SuffixTree(s)
     print(st.to_string())
     st.to_dot(Path(f"{s}.dot"))
