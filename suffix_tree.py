@@ -3,7 +3,9 @@ Based on https://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algori
 """
 from __future__ import annotations
 
+import time
 from pathlib import Path
+from random import randint
 from typing import Union, Dict, Generator
 
 
@@ -35,11 +37,13 @@ class SuffixString:
     string: str
     start_index: int
     end_index: int
+    termination_char: str
 
-    def __init__(self, string, start, end):
+    def __init__(self, string, start, end, termination_char):
         self.string = string
         self.start = start
         self.end = end
+        self.termination_char = termination_char
 
 
 class SuffixTree:
@@ -55,10 +59,25 @@ class SuffixTree:
         self.remainder = 0
         self.global_idx = -1
 
+    def _select_termination_character(self, string: str):
+        some_char = None
+        while not some_char:
+            some_char = chr(randint(0x2980, 0x2AFF))
+            found = False
+            found |= some_char in self.total_string
+            if found:
+                some_char = None
+        return some_char
+
     def insert_string(self, string: str):
+        termination_char = self._select_termination_character(string)
+        string += termination_char
         self.strings.append(
             SuffixString(
-                string, len(self.total_string), len(self.total_string) + len(string)
+                string,
+                len(self.total_string),
+                len(self.total_string) + len(string),
+                termination_char=termination_char,
             )
         )
         for local_idx, chr in enumerate(string):
@@ -144,10 +163,15 @@ class SuffixTree:
 
 
 if __name__ == "__main__":
+    start = time.time()
     st = SuffixTree()
     for s in (
-        "banan#",
-        "ananas&",
+        "banan",
+        "ananas",
+        "bananas",
+        "annas",
     ):
         st.insert_string(s)
     st.to_dot(Path(f"tmp.dot"))
+    end = time.time()
+    print(end - start)
