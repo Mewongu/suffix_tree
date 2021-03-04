@@ -37,8 +37,7 @@ class SuffixTree:
         self._root = SuffixNode(None, None)
         self.string = None
 
-    def insert(self, string):
-        assert isinstance(string, str)
+    def insert(self, string: str):
         self.string = string
         active_node = self._root
         active_edge = ""
