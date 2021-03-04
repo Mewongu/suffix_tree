@@ -94,8 +94,6 @@ class SuffixTree:
             else:
                 active_node[char] = SuffixNode(idx, None)
 
-        pass  # Breakpoint
-
     def to_string(self):
         def _to_string_helper(node, prefixes=None):
             result = ["".join(prefixes + [self.string[node.start : node.end]])]
