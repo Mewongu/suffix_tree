@@ -31,68 +31,90 @@ class Active:
         self.length = length
 
 
+class SuffixString:
+    string: str
+    start_index: int
+    end_index: int
+
+    def __init__(self, string, start, end):
+        self.string = string
+        self.start = start
+        self.end = end
+
+
 class SuffixTree:
     root: SuffixNode
-    string: str
+    total_string: str
 
     def __init__(self):
-        self.string = None
+        self.total_string = ""
+        self.strings = list()
+
         self.root = SuffixNode(None, None)
+        self.active = Active(self.root, "", 0)
+        self.remainder = 0
+        self.global_idx = -1
 
     def insert_string(self, string: str):
-        self.string = string
-        remainder = 0
-        active = Active(self.root, "", 0)
-        for idx, chr in enumerate(string):
-            remainder += 1
+        self.strings.append(
+            SuffixString(
+                string, len(self.total_string), len(self.total_string) + len(string)
+            )
+        )
+        for local_idx, chr in enumerate(string):
+            self.total_string += chr
+            self.global_idx += 1
+            self.remainder += 1
             to_link = None
-            while remainder:
-                if active.length == 0:
-                    active.edge = chr
-                if active.edge not in active.node.nodes:
-                    active.node.nodes[active.edge] = SuffixNode(start=idx, end=None)
+            while self.remainder:
+                if self.active.length == 0:
+                    self.active.edge = chr
+                if self.active.edge not in self.active.node.nodes:
+                    self.active.node.nodes[self.active.edge] = SuffixNode(
+                        start=self.global_idx, end=None
+                    )
 
                     # Rule 2
                     if to_link:
-                        to_link.suffix_link = active.node
-                    to_link = active.node
+                        to_link.suffix_link = self.active.node
+                    to_link = self.active.node
 
                 else:
-                    next = active.node.nodes[active.edge]
-                    edge_length = (next.end or idx + 1) - next.start
-                    if active.length >= edge_length:
-                        active.edge = string[next.start + edge_length]
-                        active.length -= edge_length
-                        active.node = next
+                    next = self.active.node.nodes[self.active.edge]
+                    edge_length = (next.end or self.global_idx + 1) - next.start
+                    if self.active.length >= edge_length:
+                        self.active.edge = self.total_string[next.start + edge_length]
+                        self.active.length -= edge_length
+                        self.active.node = next
                         continue
-                    if string[next.start + active.length] == chr:
-                        active.length += 1
+                    if self.total_string[next.start + self.active.length] == chr:
+                        self.active.length += 1
 
                         # Rule 2
                         if to_link:
-                            to_link.suffix_link = active.node
+                            to_link.suffix_link = self.active.node
                         break
 
-                    split_node = SuffixNode(next.start, next.start + active.length)
-                    active.node.nodes[active.edge] = split_node
-                    new_node = SuffixNode(idx, None)
+                    split_node = SuffixNode(next.start, next.start + self.active.length)
+                    self.active.node.nodes[self.active.edge] = split_node
+                    new_node = SuffixNode(self.global_idx, None)
                     split_node.nodes[chr] = new_node
-                    next.start += active.length
-                    split_node.nodes[string[next.start]] = next
+                    next.start += self.active.length
+                    split_node.nodes[self.total_string[next.start]] = next
 
                     # Rule 2
                     if to_link:
                         to_link.suffix_link = split_node
                     to_link = split_node
 
-                remainder -= 1
+                self.remainder -= 1
 
                 # Rule 1
-                if active.node == self.root and active.length > 0:
-                    active.edge = string[idx - remainder + 1]
-                    active.length -= 1
+                if self.active.node == self.root and self.active.length > 0:
+                    self.active.edge = string[local_idx - self.remainder + 1]
+                    self.active.length -= 1
                 else:
-                    active.node = active.node.suffix_link or self.root
+                    self.active.node = self.active.node.suffix_link or self.root
 
     @property
     def nodes(self) -> Generator[SuffixNode, None, None]:
@@ -102,20 +124,30 @@ class SuffixTree:
             yield node
             to_visit.extend(list(node.nodes.values()))
 
-    def to_dot(self, file: Path):
+    def get_end(self, node: SuffixNode):
+        if not node.end:
+            ends = [s.end for s in self.strings if s.end > node.start]
+            if ends:
+                return min(ends) - 1
+        return node.end
+
+    def to_dot(self, file: Path, include_suffix_links=True):
         result = "digraph { rankdir=LR;"
         for node in self.nodes:
             result += f'{hash(node)} [label="", shape=circle, height=.1, width=.1];'
             for n in node.nodes.values():
-                result += f'{hash(node)} -> {hash(n)} [label="{self.string[n.start:n.end or None]}"];'
-            if node.suffix_link:
+                result += f'{hash(node)} -> {hash(n)} [label="{self.total_string[n.start:self.get_end(n)]}"];'
+            if include_suffix_links and node.suffix_link:
                 result += f'{hash(node)} -> {hash(node.suffix_link)} [label="", style="dashed"];'
         result += "}"
         file.write_text(result)
 
 
 if __name__ == "__main__":
-    s = "banana and ananas#"
     st = SuffixTree()
-    st.insert_string(s)
+    for s in (
+        "banan#",
+        "ananas&",
+    ):
+        st.insert_string(s)
     st.to_dot(Path(f"tmp.dot"))
