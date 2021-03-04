@@ -143,7 +143,7 @@ class SuffixTree:
             yield node
             to_visit.extend(list(node.nodes.values()))
 
-    def get_end(self, node: SuffixNode):
+    def _get_end(self, node: SuffixNode):
         if not node.end:
             ends = [s.end for s in self.strings if s.end > node.start]
             if ends:
@@ -155,7 +155,7 @@ class SuffixTree:
         for node in self.nodes:
             result += f'{hash(node)} [label="", shape=circle, height=.1, width=.1];'
             for n in node.nodes.values():
-                result += f'{hash(node)} -> {hash(n)} [label="{self.total_string[n.start:self.get_end(n)]}"];'
+                result += f'{hash(node)} -> {hash(n)} [label="{self.total_string[n.start:self._get_end(n)]}"];'
             if include_suffix_links and node.suffix_link:
                 result += f'{hash(node)} -> {hash(node.suffix_link)} [label="", style="dashed"];'
         result += "}"
