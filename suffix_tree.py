@@ -143,11 +143,13 @@ class SuffixTree:
             yield node
             to_visit.extend(list(node.nodes.values()))
 
+    def _get_string_for_index(self, index: int) -> SuffixString:
+        return min([s for s in self.strings if s.end > index], key=lambda x: x.end)
+
     def _get_end(self, node: SuffixNode):
         if not node.end:
-            ends = [s.end for s in self.strings if s.end > node.start]
-            if ends:
-                return min(ends) - 1
+            suffix_string = self._get_string_for_index(node.start)
+            return suffix_string.end - 1
         return node.end
 
     def to_dot(self, file: Path, include_suffix_links=True):
