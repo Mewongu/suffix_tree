@@ -33,63 +33,72 @@ class SuffixNode:
         return self._edges.values()
 
 
+class Active:
+    node: SuffixNode
+    edge: str
+    length: int
+
+    def __init__(self, node, edge, length):
+        self.node = node
+        self.edge = edge
+        self.length = length
+
+
 class SuffixTree:
     def __init__(self, string: str):
         self._root = SuffixNode(None, None)
         self.string = string
-        active_node = self._root
-        active_edge = ""
-        active_length = 0
+        act = Active(self._root, "", 0)
         remainder = 1
 
         for idx, char in enumerate(string):
             to_link = None
-            if active_edge:
-                node = active_node[active_edge]
-                if string[node.start + active_length] == char:
-                    active_length += 1
+            if act.edge:
+                node = act.node[act.edge]
+                if string[node.start + act.length] == char:
+                    act.length += 1
                     remainder += 1
 
-                    if node.start + active_length == node.end:
-                        active_node = node
-                        active_edge = ""
-                        active_length = 0
+                    if node.start + act.length == node.end:
+                        act.node = node
+                        act.edge = ""
+                        act.length = 0
                 else:
-                    while active_edge in active_node:
-                        node = active_node[active_edge]
-                        split_node = SuffixNode(node.start + active_length, None)
+                    while act.edge in act.node:
+                        node = act.node[act.edge]
+                        split_node = SuffixNode(node.start + act.length, None)
 
                         # Check Rule 2
                         if to_link:
                             to_link.suffix_link = node
 
-                        node.end = node.start + active_length
-                        node[string[node.start + active_length]] = split_node
+                        node.end = node.start + act.length
+                        node[string[node.start + act.length]] = split_node
                         node[char] = SuffixNode(idx, None)
                         remainder -= 1
 
                         # Check Rule 1
-                        if active_node == self._root:
-                            if active_length:
-                                active_length -= 1
-                                active_edge = string[idx - active_length]
+                        if act.node == self._root:
+                            if act.length:
+                                act.length -= 1
+                                act.edge = string[idx - act.length]
                         else:
                             # Rule 3
-                            active_node = (
-                                active_node.suffix_link
-                                if active_node.suffix_link
+                            act.node = (
+                                act.node.suffix_link
+                                if act.node.suffix_link
                                 else self._root
                             )
                         to_link = node
-                    active_node[active_edge] = SuffixNode(idx, None)
-                    active_edge = ""
+                    act.node[act.edge] = SuffixNode(idx, None)
+                    act.edge = ""
 
-            elif char in active_node:
-                active_edge += char
-                active_length = 1
+            elif char in act.node:
+                act.edge += char
+                act.length = 1
                 remainder += 1
             else:
-                active_node[char] = SuffixNode(idx, None)
+                act.node[char] = SuffixNode(idx, None)
 
     def to_string(self):
         def _to_string_helper(node, prefixes=None):
