@@ -36,13 +36,18 @@ class SuffixTree:
         remainder = 1
 
         for idx, char in enumerate(string):
+            to_link = None
             if active_edge:
                 node = active_node.edges[active_edge]
                 if string[node.start + active_length] == char:
                     active_length += 1
                     remainder += 1
+
+                    if node.start + active_length == node.end:
+                        active_node = node
+                        active_edge = ""
+                        active_length = 0
                 else:
-                    to_link = None
                     while active_edge in active_node.edges:
                         node = active_node.edges[active_edge]
                         split_node = SuffixNode(node.start + active_length, None)
@@ -61,7 +66,13 @@ class SuffixTree:
                             if active_length:
                                 active_length -= 1
                                 active_edge = string[idx - active_length]
-
+                        else:
+                            # Rule 3
+                            active_node = (
+                                active_node.suffix_link
+                                if active_node.suffix_link
+                                else self._root
+                            )
                         to_link = node
                     active_node.edges[active_edge] = SuffixNode(idx, None)
                     active_edge = ""
@@ -92,5 +103,5 @@ class SuffixTree:
 
 if __name__ == "__main__":
     st = SuffixTree()
-    st.insert("abcabx")
+    st.insert("abcabxabcd")
     print(st.to_string())
