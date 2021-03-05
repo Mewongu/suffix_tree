@@ -3,11 +3,30 @@ Based on https://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algori
 """
 from __future__ import annotations
 
+from functools import total_ordering
 from pathlib import Path
 from random import randint
 from typing import Union, Dict, Generator, Tuple
 
-StringId = int
+
+@total_ordering
+class StringId:
+    id: int
+
+    def __init__(self, id: int):
+        self.id = id
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.id})"
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __le__(self, other):
+        return self.id < other.id
 
 
 class SuffixNode:
@@ -83,7 +102,7 @@ class SuffixTree:
         termination_char = self._select_termination_character(string)
         string += termination_char
         suffix_string = SuffixString(
-            len(self.strings) + 0xBEEF,
+            StringId(len(self.strings) + 0xBEEF),
             string,
             len(self.total_string),
             len(self.total_string) + len(string),
