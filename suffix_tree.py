@@ -34,12 +34,14 @@ class SuffixNode:
     start: int
     end: Union[int, None]
     suffix_link: Union[SuffixNode, None]
+    parent: Union[SuffixNode, None]
 
-    def __init__(self, start: int, end: int):
+    def __init__(self, start: int, end: int, parent: SuffixNode):
         self.start = start
         self.end = end
         self.nodes = dict()
         self.suffix_link = None
+        self.parent = parent
 
 
 class Active:
@@ -82,7 +84,7 @@ class SuffixTree:
         self.total_string = ""
         self.strings = dict()
 
-        self.root = SuffixNode(None, None)
+        self.root = SuffixNode(None, None, None)
         self.active = Active(self.root, "", 0)
         self.remainder = 0
         self.global_idx = -1
@@ -119,7 +121,7 @@ class SuffixTree:
                     self.active.edge = chr
                 if self.active.edge not in self.active.node.nodes:
                     self.active.node.nodes[self.active.edge] = SuffixNode(
-                        start=self.global_idx, end=None
+                        start=self.global_idx, end=None, parent=self.active.node
                     )
 
                     # Rule 2
@@ -143,12 +145,17 @@ class SuffixTree:
                             to_link.suffix_link = self.active.node
                         break
 
-                    split_node = SuffixNode(next.start, next.start + self.active.length)
+                    split_node = SuffixNode(
+                        next.start,
+                        next.start + self.active.length,
+                        parent=self.active.node,
+                    )
                     self.active.node.nodes[self.active.edge] = split_node
-                    new_node = SuffixNode(self.global_idx, None)
+                    new_node = SuffixNode(self.global_idx, None, parent=split_node)
                     split_node.nodes[chr] = new_node
                     next.start += self.active.length
                     split_node.nodes[self.total_string[next.start]] = next
+                    next.parent = split_node
 
                     # Rule 2
                     if to_link:
@@ -187,6 +194,15 @@ class SuffixTree:
             return suffix_string.end - 1
         return node.end
 
+    def _iter_ends_from_node(self, node):
+        to_visit = [node]
+        while to_visit:
+            node = to_visit.pop()
+            if node.end is None:
+                yield node
+            else:
+                to_visit.extend([n for n in node.nodes.values()])
+
     def find_all(self, string: str) -> Generator[Tuple[StringId, int], None, None]:
         active = self._traverse(string)
         if not active:
@@ -194,17 +210,13 @@ class SuffixTree:
         node = active.node
         if active.edge:
             node = node.nodes[active.edge]
-        distance = self._get_edge_length(node) - active.length
-
-        to_visit = [(distance, node)]
-        while to_visit:
-            distance, node = to_visit.pop()
-            if node.end is None:
-                suffix_string = self._get_string_for_total_index(node.start)
-                yield suffix_string.id, suffix_string.length - distance - 1
-            to_visit.extend(
-                [(distance + self._get_edge_length(n), n) for n in node.nodes.values()]
-            )
+        for node in self._iter_ends_from_node(node):
+            suffix_string = self._get_string_for_total_index(node.start)
+            distance = 0
+            while node.start != None:
+                distance += self._get_edge_length(node)
+                node = node.parent
+            yield suffix_string, suffix_string.length - distance
 
     def _get_edge_length(self, node: SuffixNode) -> int:
         return self._get_end(node) - node.start

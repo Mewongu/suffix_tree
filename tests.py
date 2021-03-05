@@ -1,3 +1,4 @@
+import re
 import string
 
 from hypothesis import given
@@ -5,6 +6,16 @@ from hypothesis import strategies as st
 from hypothesis.strategies import composite
 
 from suffix_tree import SuffixTree
+
+
+def find_all(text, search_string):
+    start = 0
+    while True:
+        start = text.find(search_string, start)
+        if start == -1:
+            return
+        yield start
+        start += 1
 
 
 @composite
@@ -34,6 +45,33 @@ def text_search_term_insertion_count(draw):
     result_text += text[prev_pos:]
 
     return result_text, search_term, len(insertion_points)
+
+
+@composite
+def text_search_string_locations(draw):
+    text = draw(
+        st.text(
+            min_size=1, max_size=1000, alphabet=string.ascii_letters + string.digits
+        )
+    )
+    ints = sorted(
+        draw(
+            st.lists(
+                st.integers(min_value=0, max_value=len(text)), min_size=2, max_size=2
+            ).filter(lambda x: x[0] != x[1])
+        )
+    )
+    start, end = ints[0], ints[1]
+    search_string = text[start:end]
+    locations = list()
+    idx = None
+    while True:
+        idx = text.find(search_string, idx)
+        if idx == -1:
+            break
+        locations.append(idx)
+        idx += 1
+    return text, search_string, locations
 
 
 def suffixes(search_term):
@@ -93,3 +131,12 @@ def test_occurrances(text_search_term_insertion_count):
     st = SuffixTree()
     st.insert_string(text)
     assert st.occurrances(search_term) == insertion_count
+
+
+@given(text_search_string_locations())
+def test_find_all(text_search_string_locations):
+    text, search_string, locations = text_search_string_locations
+    st = SuffixTree()
+    st.insert_string(text)
+    result = st.find_all(search_string)
+    assert sorted([r[1] for r in result]) == sorted(locations)
