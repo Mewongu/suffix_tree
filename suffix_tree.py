@@ -16,7 +16,7 @@ class SuffixNode:
     end: Union[int, None]
     suffix_link: Union[SuffixNode, None]
 
-    def __init__(self, start, end):
+    def __init__(self, start: int, end: int):
         self.start = start
         self.end = end
         self.nodes = dict()
@@ -28,7 +28,7 @@ class Active:
     edge: str
     length: int
 
-    def __init__(self, node, edge, length):
+    def __init__(self, node: SuffixNode, edge: str, length: int):
         self.node = node
         self.edge = edge
         self.length = length
@@ -41,7 +41,9 @@ class SuffixString:
     end_index: int
     termination_char: str
 
-    def __init__(self, id, string, start, end, termination_char):
+    def __init__(
+        self, id: StringId, string: str, start: int, end: int, termination_char: str
+    ):
         self.id = id
         self.string = string
         self.start = start
@@ -49,7 +51,7 @@ class SuffixString:
         self.termination_char = termination_char
 
     @property
-    def length(self):
+    def length(self) -> int:
         return self.end - self.start - 1
 
 
@@ -151,40 +153,40 @@ class SuffixTree:
             yield node
             to_visit.extend(list(node.nodes.values()))
 
-    def get_string(self, string_id):
+    def get_string(self, string_id: StringId) -> SuffixString:
         return self.strings[string_id]
 
-    def _get_string_for_index(self, index: int) -> SuffixString:
+    def _get_string_for_total_index(self, index: int) -> SuffixString:
         return min(
             [s for s in self.strings.values() if s.end > index], key=lambda x: x.end
         )
 
-    def _get_end(self, node: SuffixNode):
+    def _get_end(self, node: SuffixNode) -> Union[int, None]:
         if not node.end:
-            suffix_string = self._get_string_for_index(node.start)
+            suffix_string = self._get_string_for_total_index(node.start)
             return suffix_string.end - 1
         return node.end
 
     def find_all(self, string: str) -> Generator[Tuple[StringId, int], None, None]:
-        active = self.traverse(string)
+        active = self._traverse(string)
         if not active:
             return None
         node = active.node
         if active.edge:
             node = node.nodes[active.edge]
-        distance = self.get_edge_length(node) - active.length
+        distance = self._get_edge_length(node) - active.length
 
         to_visit = [(distance, node)]
         while to_visit:
             distance, node = to_visit.pop()
             if node.end is None:
-                suffix_string = self._get_string_for_index(node.start)
+                suffix_string = self._get_string_for_total_index(node.start)
                 yield suffix_string.id, suffix_string.length - distance - 1
             to_visit.extend(
-                [(distance + self.get_edge_length(n), n) for n in node.nodes.values()]
+                [(distance + self._get_edge_length(n), n) for n in node.nodes.values()]
             )
 
-    def get_edge_length(self, node):
+    def _get_edge_length(self, node: SuffixNode) -> int:
         return self._get_end(node) - node.start
 
     def to_dot(self, file: Path, include_suffix_links=True):
@@ -198,7 +200,7 @@ class SuffixTree:
         result += "}"
         file.write_text(result)
 
-    def traverse(self, string) -> Union[Active, None]:
+    def _traverse(self, string) -> Union[Active, None]:
         active = Active(self.root, "", 0)
         active.node = self.root
         active.length = 0
@@ -227,10 +229,10 @@ class SuffixTree:
         return active
 
     def __contains__(self, string: str) -> bool:
-        return self.traverse(string) is not None
+        return self._traverse(string) is not None
 
     def occurrances(self, string: str) -> int:
-        active = self.traverse(string)
+        active = self._traverse(string)
         if not active:
             return 0
         node = active.node
