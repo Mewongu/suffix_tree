@@ -74,6 +74,7 @@ class SuffixTree:
             some_char = chr(randint(0x2980, 0x2AFF))
             found = False
             found |= some_char in self.total_string
+            found |= some_char in string
             if found:
                 some_char = None
         return some_char
