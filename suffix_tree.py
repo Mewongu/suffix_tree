@@ -203,9 +203,6 @@ class SuffixTree:
             return suffix_string.end - 1
         return node.end
 
-    def _iter_ends_from_node(self, node):
-        yield from node.iter_ends()
-
     def find_all(self, string: str) -> Generator[Tuple[StringId, int], None, None]:
         active = self._traverse(string)
         if not active:
@@ -213,7 +210,7 @@ class SuffixTree:
         node = active.node
         if active.edge:
             node = node.nodes[active.edge]
-        for node in self._iter_ends_from_node(node):
+        for node in node.iter_ends():
             suffix_string = self._get_string_for_total_index(node.start)
             distance = 0
             while node.start is not None:
