@@ -130,7 +130,7 @@ def test_occurrances(text_search_term_insertion_count):
     text, search_term, insertion_count = text_search_term_insertion_count
     st = SuffixTree()
     st.insert_string(text)
-    assert st.occurrances(search_term) == insertion_count
+    assert st.occurrences(search_term) == insertion_count
 
 
 @given(text_search_string_locations())

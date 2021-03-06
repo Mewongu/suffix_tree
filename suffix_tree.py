@@ -263,7 +263,7 @@ class SuffixTree:
     def __contains__(self, string: str) -> bool:
         return self._traverse(string) is not None
 
-    def occurrances(self, string: str) -> int:
+    def occurrences(self, string: str) -> int:
         active = self._traverse(string)
         if not active:
             return 0
