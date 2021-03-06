@@ -106,17 +106,6 @@ class SuffixTree:
             yield node
             to_visit.extend(list(node.nodes.values()))
 
-    def _select_termination_character(self, string: str):
-        some_char = None
-        while not some_char:
-            some_char = chr(randint(0x2980, 0x2AFF))
-            found = False
-            found |= some_char in self.total_string
-            found |= some_char in string
-            if found:
-                some_char = None
-        return some_char
-
     def insert_string(self, string: str):
         termination_char = self._select_termination_character(string)
         string += termination_char
@@ -188,6 +177,17 @@ class SuffixTree:
                 else:
                     self.active.node = self.active.node.suffix_link or self.root
         return suffix_string.id
+
+    def _select_termination_character(self, string: str):
+        some_char = None
+        while not some_char:
+            some_char = chr(randint(0x2980, 0x2AFF))
+            found = False
+            found |= some_char in self.total_string
+            found |= some_char in string
+            if found:
+                some_char = None
+        return some_char
 
     def get_string(self, string_id: StringId) -> SuffixString:
         return self.strings[string_id]
