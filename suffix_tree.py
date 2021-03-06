@@ -200,20 +200,9 @@ class SuffixTree:
             yield suffix_string, suffix_string.length - distance
 
     def occurrences(self, string: str) -> int:
-        active = self._traverse(string)
-        if not active:
-            return 0
-        node = active.node
-        if active.edge:
-            node = node.nodes[active.edge]
         count = 0
-
-        to_visit = [node]
-        while to_visit:
-            node = to_visit.pop()
-            if node.end is None:
-                count += 1
-            to_visit.extend(node.nodes.values())
+        for _ in self.find_all(string):
+            count += 1
         return count
 
     def _traverse(self, string) -> Union[Active, None]:
