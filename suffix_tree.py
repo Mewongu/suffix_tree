@@ -106,6 +106,9 @@ class SuffixTree:
             yield node
             to_visit.extend(list(node.nodes.values()))
 
+    def __contains__(self, string: str) -> bool:
+        return self._traverse(string) is not None
+
     def insert_string(self, string: str):
         termination_char = self._select_termination_character(string)
         string += termination_char
@@ -276,9 +279,6 @@ class SuffixTree:
                 active.node = edge_node
                 active.edge = ""
         return active
-
-    def __contains__(self, string: str) -> bool:
-        return self._traverse(string) is not None
 
 
 if __name__ == "__main__":
