@@ -178,6 +178,9 @@ class SuffixTree:
                     self.active.node = self.active.node.suffix_link or self.root
         return suffix_string.id
 
+    def get_string(self, string_id: StringId) -> SuffixString:
+        return self.strings[string_id]
+
     def _select_termination_character(self, string: str):
         some_char = None
         while not some_char:
@@ -188,9 +191,6 @@ class SuffixTree:
             if found:
                 some_char = None
         return some_char
-
-    def get_string(self, string_id: StringId) -> SuffixString:
-        return self.strings[string_id]
 
     def _get_string_for_total_index(self, index: int) -> SuffixString:
         return min(
