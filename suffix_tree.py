@@ -98,16 +98,16 @@ class SuffixTree:
         self.remainder = 0
         self.global_idx = -1
 
-    def _select_termination_character(self, string: str):
-        some_char = None
-        while not some_char:
-            some_char = chr(randint(0x2980, 0x2AFF))
-            found = False
-            found |= some_char in self.total_string
-            found |= some_char in string
-            if found:
-                some_char = None
-        return some_char
+    @property
+    def nodes(self) -> Generator[SuffixNode, None, None]:
+        to_visit = [self.root]
+        while to_visit:
+            node = to_visit.pop()
+            yield node
+            to_visit.extend(list(node.nodes.values()))
+
+    def __contains__(self, string: str) -> bool:
+        return self._traverse(string) is not None
 
     def insert_string(self, string: str):
         termination_char = self._select_termination_character(string)
@@ -181,27 +181,8 @@ class SuffixTree:
                     self.active.node = self.active.node.suffix_link or self.root
         return suffix_string.id
 
-    @property
-    def nodes(self) -> Generator[SuffixNode, None, None]:
-        to_visit = [self.root]
-        while to_visit:
-            node = to_visit.pop()
-            yield node
-            to_visit.extend(list(node.nodes.values()))
-
     def get_string(self, string_id: StringId) -> SuffixString:
         return self.strings[string_id]
-
-    def _get_string_for_total_index(self, index: int) -> SuffixString:
-        return min(
-            [s for s in self.strings.values() if s.end > index], key=lambda x: x.end
-        )
-
-    def _get_end(self, node: SuffixNode) -> Union[int, None]:
-        if not node.end:
-            suffix_string = self._get_string_for_total_index(node.start)
-            return suffix_string.end - 1
-        return node.end
 
     def find_all(self, string: str) -> Generator[Tuple[StringId, int], None, None]:
         active = self._traverse(string)
@@ -218,19 +199,22 @@ class SuffixTree:
                 node = node.parent
             yield suffix_string, suffix_string.length - distance
 
-    def _get_edge_length(self, node: SuffixNode) -> int:
-        return self._get_end(node) - node.start
+    def occurrences(self, string: str) -> int:
+        active = self._traverse(string)
+        if not active:
+            return 0
+        node = active.node
+        if active.edge:
+            node = node.nodes[active.edge]
+        count = 0
 
-    def to_dot(self, file: Path, include_suffix_links=True):
-        result = "digraph { rankdir=LR;"
-        for node in self.nodes:
-            result += f'{hash(node)} [label="", shape=circle, height=.1, width=.1];'
-            for n in node.nodes.values():
-                result += f'{hash(node)} -> {hash(n)} [label="{self.total_string[n.start:self._get_end(n)]}"];'
-            if include_suffix_links and node.suffix_link:
-                result += f'{hash(node)} -> {hash(node.suffix_link)} [label="", style="dashed"];'
-        result += "}"
-        file.write_text(result)
+        to_visit = [node]
+        while to_visit:
+            node = to_visit.pop()
+            if node.end is None:
+                count += 1
+            to_visit.extend(node.nodes.values())
+        return count
 
     def _traverse(self, string) -> Union[Active, None]:
         active = Active(self.root, "", 0)
@@ -260,25 +244,41 @@ class SuffixTree:
                 active.edge = ""
         return active
 
-    def __contains__(self, string: str) -> bool:
-        return self._traverse(string) is not None
+    def _select_termination_character(self, string: str):
+        some_char = None
+        while not some_char:
+            some_char = chr(randint(0x2980, 0x2AFF))
+            found = False
+            found |= some_char in self.total_string
+            found |= some_char in string
+            if found:
+                some_char = None
+        return some_char
 
-    def occurrences(self, string: str) -> int:
-        active = self._traverse(string)
-        if not active:
-            return 0
-        node = active.node
-        if active.edge:
-            node = node.nodes[active.edge]
-        count = 0
+    def _get_string_for_total_index(self, index: int) -> SuffixString:
+        return min(
+            [s for s in self.strings.values() if s.end > index], key=lambda x: x.end
+        )
 
-        to_visit = [node]
-        while to_visit:
-            node = to_visit.pop()
-            if node.end is None:
-                count += 1
-            to_visit.extend(node.nodes.values())
-        return count
+    def _get_end(self, node: SuffixNode) -> Union[int, None]:
+        if not node.end:
+            suffix_string = self._get_string_for_total_index(node.start)
+            return suffix_string.end - 1
+        return node.end
+
+    def _get_edge_length(self, node: SuffixNode) -> int:
+        return self._get_end(node) - node.start
+
+    def to_dot(self, file: Path, include_suffix_links=True):
+        result = "digraph { rankdir=LR;"
+        for node in self.nodes:
+            result += f'{hash(node)} [label="", shape=circle, height=.1, width=.1];'
+            for n in node.nodes.values():
+                result += f'{hash(node)} -> {hash(n)} [label="{self.total_string[n.start:self._get_end(n)]}"];'
+            if include_suffix_links and node.suffix_link:
+                result += f'{hash(node)} -> {hash(node.suffix_link)} [label="", style="dashed"];'
+        result += "}"
+        file.write_text(result)
 
 
 if __name__ == "__main__":
