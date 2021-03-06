@@ -196,6 +196,23 @@ class SuffixTree:
                 node = node.parent
             yield suffix_string, suffix_string.length - distance
 
+    def occurrences(self, string: str) -> int:
+        active = self._traverse(string)
+        if not active:
+            return 0
+        node = active.node
+        if active.edge:
+            node = node.nodes[active.edge]
+        count = 0
+
+        to_visit = [node]
+        while to_visit:
+            node = to_visit.pop()
+            if node.end is None:
+                count += 1
+            to_visit.extend(node.nodes.values())
+        return count
+
     def _select_termination_character(self, string: str):
         some_char = None
         while not some_char:
@@ -262,23 +279,6 @@ class SuffixTree:
 
     def __contains__(self, string: str) -> bool:
         return self._traverse(string) is not None
-
-    def occurrences(self, string: str) -> int:
-        active = self._traverse(string)
-        if not active:
-            return 0
-        node = active.node
-        if active.edge:
-            node = node.nodes[active.edge]
-        count = 0
-
-        to_visit = [node]
-        while to_visit:
-            node = to_visit.pop()
-            if node.end is None:
-                count += 1
-            to_visit.extend(node.nodes.values())
-        return count
 
 
 if __name__ == "__main__":
