@@ -98,6 +98,14 @@ class SuffixTree:
         self.remainder = 0
         self.global_idx = -1
 
+    @property
+    def nodes(self) -> Generator[SuffixNode, None, None]:
+        to_visit = [self.root]
+        while to_visit:
+            node = to_visit.pop()
+            yield node
+            to_visit.extend(list(node.nodes.values()))
+
     def _select_termination_character(self, string: str):
         some_char = None
         while not some_char:
@@ -180,14 +188,6 @@ class SuffixTree:
                 else:
                     self.active.node = self.active.node.suffix_link or self.root
         return suffix_string.id
-
-    @property
-    def nodes(self) -> Generator[SuffixNode, None, None]:
-        to_visit = [self.root]
-        while to_visit:
-            node = to_visit.pop()
-            yield node
-            to_visit.extend(list(node.nodes.values()))
 
     def get_string(self, string_id: StringId) -> SuffixString:
         return self.strings[string_id]
