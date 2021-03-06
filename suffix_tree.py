@@ -43,6 +43,15 @@ class SuffixNode:
         self.suffix_link = None
         self.parent = parent
 
+    def iter_ends(self) -> Generator[SuffixNode, None, None]:
+        to_visit = [self]
+        while to_visit:
+            node = to_visit.pop()
+            if node.end is None:
+                yield node
+            else:
+                to_visit.extend([n for n in node.nodes.values()])
+
 
 class Active:
     node: SuffixNode
@@ -195,13 +204,7 @@ class SuffixTree:
         return node.end
 
     def _iter_ends_from_node(self, node):
-        to_visit = [node]
-        while to_visit:
-            node = to_visit.pop()
-            if node.end is None:
-                yield node
-            else:
-                to_visit.extend([n for n in node.nodes.values()])
+        yield from node.iter_ends()
 
     def find_all(self, string: str) -> Generator[Tuple[StringId, int], None, None]:
         active = self._traverse(string)
@@ -213,7 +216,7 @@ class SuffixTree:
         for node in self._iter_ends_from_node(node):
             suffix_string = self._get_string_for_total_index(node.start)
             distance = 0
-            while node.start != None:
+            while node.start is not None:
                 distance += self._get_edge_length(node)
                 node = node.parent
             yield suffix_string, suffix_string.length - distance
@@ -282,7 +285,6 @@ class SuffixTree:
 
 
 if __name__ == "__main__":
-    import pprint
     import time
 
     start = time.time()
@@ -294,6 +296,3 @@ if __name__ == "__main__":
     ):
         st.insert_string(s)
     st.to_dot(Path(f"tmp.dot"))
-    pprint.pprint(sorted(st.find_all("a")))
-    end = time.time()
-    print(end - start)
