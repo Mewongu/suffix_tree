@@ -43,7 +43,7 @@ class SuffixNode:
         self.suffix_link = None
         self.parent = parent
 
-    def iter_ends(self) -> Generator[SuffixNode, None, None]:
+    def iter_leaves(self) -> Generator[SuffixNode, None, None]:
         to_visit = [self]
         while to_visit:
             node = to_visit.pop()
@@ -160,8 +160,8 @@ class SuffixTree:
                         parent=self.active.node,
                     )
                     self.active.node.nodes[self.active.edge] = split_node
-                    new_node = SuffixNode(self.global_idx, None, parent=split_node)
-                    split_node.nodes[chr] = new_node
+                    leaf = SuffixNode(self.global_idx, None, parent=split_node)
+                    split_node.nodes[chr] = leaf
                     next.start += self.active.length
                     split_node.nodes[self.total_string[next.start]] = next
                     next.parent = split_node
@@ -210,7 +210,7 @@ class SuffixTree:
         node = active.node
         if active.edge:
             node = node.nodes[active.edge]
-        for node in node.iter_ends():
+        for node in node.iter_leaves():
             suffix_string = self._get_string_for_total_index(node.start)
             distance = 0
             while node.start is not None:
