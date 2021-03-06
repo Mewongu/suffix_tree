@@ -216,6 +216,34 @@ class SuffixTree:
             to_visit.extend(node.nodes.values())
         return count
 
+    def _traverse(self, string) -> Union[Active, None]:
+        active = Active(self.root, "", 0)
+        active.node = self.root
+        active.length = 0
+        active.edge = ""
+
+        for c in string:
+            if active.edge:
+                if (
+                    c
+                    != self.total_string[
+                        active.node.nodes[active.edge].start + active.length
+                    ]
+                ):
+                    return None
+                active.length += 1
+
+            else:
+                active.edge = c
+                active.length = 1
+                if active.edge not in active.node.nodes:
+                    return None
+            edge_node = active.node.nodes[active.edge]
+            if edge_node.end == edge_node.start + active.length:
+                active.node = edge_node
+                active.edge = ""
+        return active
+
     def _select_termination_character(self, string: str):
         some_char = None
         while not some_char:
@@ -251,34 +279,6 @@ class SuffixTree:
                 result += f'{hash(node)} -> {hash(node.suffix_link)} [label="", style="dashed"];'
         result += "}"
         file.write_text(result)
-
-    def _traverse(self, string) -> Union[Active, None]:
-        active = Active(self.root, "", 0)
-        active.node = self.root
-        active.length = 0
-        active.edge = ""
-
-        for c in string:
-            if active.edge:
-                if (
-                    c
-                    != self.total_string[
-                        active.node.nodes[active.edge].start + active.length
-                    ]
-                ):
-                    return None
-                active.length += 1
-
-            else:
-                active.edge = c
-                active.length = 1
-                if active.edge not in active.node.nodes:
-                    return None
-            edge_node = active.node.nodes[active.edge]
-            if edge_node.end == edge_node.start + active.length:
-                active.node = edge_node
-                active.edge = ""
-        return active
 
 
 if __name__ == "__main__":
